@@ -14,6 +14,10 @@ $configs['postmark'] = getenv('postmark');
 $configs['low'] = getenv('low');
 $configs['high'] = getenv('high');
 
+// push
+$configs['poToken'] = getenv('po_token');
+$configs['poUser'] = getenv('po_user');
+
 class octopusDay {
 
     public  $date;
@@ -164,15 +168,21 @@ if ($tomorrowData->rawPrices !== FALSE){
 
         // format for email, ugh
         $total_array = array();
+        $poMessage = '';
         foreach ($tomorrowData->cheapTimes AS $cheapTime){
             $email_array = (array)$cheapTime;
             $email_array['type'] = "Low";
             array_push($total_array,$email_array);
+            $poMessage .= 'Under '.$configs['low'].'p '.$email_array['from'].' to '.$email_array['to'].', ';
         }
         foreach ($tomorrowData->expensiveTimes AS $expTime){
             $email_array = (array)$expTime;
             $email_array['type'] = "High";
             array_push($total_array,$email_array);
+            $poMessage .= 'Over '.$configs['high'].'p '.$email_array['from'].' to '.$email_array['to'].', ';
+        }
+        if (strlen($poMessage) > 2){
+            $poMessage = (substr($poMessage, 0, -2)).".";
         }
         
         // email
@@ -188,7 +198,29 @@ if ($tomorrowData->rawPrices !== FALSE){
             "subject_line" => "Agile prices for ".$tomorrowData->date->format('d/m/Y'),
             ]);
         
+        // push via PushOver
+        if ($configs['poToken'] != ''){
 
+            $poTitle = urlencode("Agile prices for ".$tomorrowData->date->format('d/m/Y'));
+            $poMessage = urlencode($poMessage);
+
+            $curl2 = curl_init();
+
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => 'https://api.pushover.net/1/messages.json?user='.$configs['poUser'].'&token='.$configs['poToken'].'&message='.$poMessage.'&title='.$poTitle,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+              ));
+              
+              $po_res = curl_exec($curl2);
+              
+              curl_close($curl2);
+        }
     }
 
 }
