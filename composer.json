@@ -1,0 +1,12 @@
+{
+  "require" : {
+	"php": ">=8.2.0",
+    "ext-mbstring": "*",
+    "wildbit/postmark-php":"*"
+  },
+  "require-dev": {
+    "heroku/heroku-buildpack-php": "*",
+    "ext-mbstring": "*",
+    "wildbit/postmark-php":"*"
+  }
+}
