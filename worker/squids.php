@@ -66,7 +66,7 @@ class octopusDay {
         // format times from Zulu to local in case BST
         $thisDate = new DateTime($dateTimeString);
         $thisDate->setTimezone(new DateTimeZone('Europe/London'));
-        return($thisDate->format('H:i:s')); 
+        return($thisDate->format('H:i')); 
     }
 
     public function findPricePeriods($t_low,$t_high){
