@@ -206,7 +206,7 @@ if ($tomorrowData->rawPrices !== FALSE){
 
             $curl2 = curl_init();
 
-            curl_setopt_array($curl, array(
+            curl_setopt_array($curl2, array(
                 CURLOPT_URL => 'https://api.pushover.net/1/messages.json?user='.$configs['poUser'].'&token='.$configs['poToken'].'&message='.$poMessage.'&title='.$poTitle,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
