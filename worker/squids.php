@@ -1,7 +1,6 @@
 <?php
 
 require('./vendor/autoload.php');
-use Postmark\PostmarkClient;
 
 date_default_timezone_set("Europe/London");
 
@@ -14,9 +13,12 @@ $configs['postmark'] = getenv('postmark');
 $configs['low'] = getenv('low');
 $configs['high'] = getenv('high');
 
+$configs['emailto'] = getenv('emailto');
+
 // push
 $configs['poToken'] = getenv('po_token');
 $configs['poUser'] = getenv('po_user');
+
 
 class octopusDay {
 
@@ -165,8 +167,12 @@ if ($tomorrowData->rawPrices !== FALSE){
 
     if ((count($tomorrowData->cheapTimes) > 0) || (count($tomorrowData->expensiveTimes) > 0)){
         // there is a low or a high, or both
+        // so, do notifications
 
-        // format for email, ugh
+        // format for email and push
+        // poMessage is the Push notification
+        // email is a sort of weird array - this could be much neater :P
+
         $total_array = array();
         $poMessage = '';
         foreach ($tomorrowData->cheapTimes AS $cheapTime){
@@ -181,22 +187,37 @@ if ($tomorrowData->rawPrices !== FALSE){
             array_push($total_array,$email_array);
             $poMessage .= 'Over '.$configs['high'].'p '.$email_array['from'].' to '.$email_array['to'].', ';
         }
+        // tail end of push message
         if (strlen($poMessage) > 2){
             $poMessage = (substr($poMessage, 0, -2)).".";
         }
         
-        // email
-        $client = new PostmarkClient($configs['postmark']);
-        $sendResult = $client->sendEmailWithTemplate(
-            "squids_in@mndigital.co",
-            "tom@tomroyal.com",
-            37708798,
-            [
-            "body" => "",
-            "threshold" => 'Showing prices above '.$configs['high'].'p and below '.$configs['low'].'p',
-            "time_periods" => $total_array,
-            "subject_line" => "Agile prices for ".$tomorrowData->date->format('d/m/Y'),
-            ]);
+        // send email
+
+        if ($configs['postmark'] != ''){
+
+            $email_fields['threshold'] = 'Showing prices above '.$configs['high'].'p and below '.$configs['low'].'p';
+            $email_fields['subject_line'] = "Agile prices for ".$tomorrowData->date->format('d/m/Y');
+            $email_fields['time_periods'] = $total_array;
+
+            $email_data["from"] = "Squids In <squids_in@mndigital.co>";
+            $email_data["to"] = $configs['emailto'];
+            $email_data["TemplateId"] = 37708798;
+            $email_data["TemplateModel"] = $email_fields; 
+                    
+            $curl3 = curl_init('https://api.postmarkapp.com/email/withTemplate');
+            curl_setopt($curl3, CURLOPT_HTTPHEADER, array(
+            "Accept: application/json",
+            "Content-Type: application/json",
+            'X-Postmark-Server-Token: '.$configs['postmark'].''
+            ));
+            curl_setopt($curl3, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl3, CURLOPT_POSTFIELDS, json_encode($email_data));
+
+            $pm_response = curl_exec($curl3);
+
+            curl_close($curl3);    
+        }        
         
         // push via PushOver
         if ($configs['poToken'] != ''){
